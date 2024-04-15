@@ -1,0 +1,28 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Destitution <43219594+Destitution-SC@users.noreply.github.com>
+Date: Mon, 15 Apr 2024 17:03:54 +0200
+Subject: [PATCH] Translate colors
+
+
+diff --git a/src/main/java/org/bukkit/craftbukkit/util/CraftChatMessage.java b/src/main/java/org/bukkit/craftbukkit/util/CraftChatMessage.java
+index 753200057e74b8e2d5274894b982e6ee946a559e..52c56c7d56465ac9155f7c30b4108224b866bcb2 100644
+--- a/src/main/java/org/bukkit/craftbukkit/util/CraftChatMessage.java
++++ b/src/main/java/org/bukkit/craftbukkit/util/CraftChatMessage.java
+@@ -182,7 +182,7 @@ public final class CraftChatMessage {
+     }
+ 
+     public static Component fromStringOrNull(String message) {
+-        return CraftChatMessage.fromStringOrNull(message, false);
++        return CraftChatMessage.fromStringOrNull(ChatColor.translateAlternateColorCodes('&', message), false);
+     }
+ 
+     public static Component fromStringOrNull(String message, boolean keepNewlines) {
+@@ -190,7 +190,7 @@ public final class CraftChatMessage {
+     }
+ 
+     public static Component[] fromString(String message) {
+-        return CraftChatMessage.fromString(message, false);
++        return CraftChatMessage.fromString(ChatColor.translateAlternateColorCodes('&', message), false);
+     }
+ 
+     public static Component[] fromString(String message, boolean keepNewlines) {
