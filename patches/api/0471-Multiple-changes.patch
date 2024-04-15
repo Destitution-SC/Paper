@@ -1,0 +1,57 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Destitution <43219594+Destitution-SC@users.noreply.github.com>
+Date: Mon, 15 Apr 2024 23:04:26 +0200
+Subject: [PATCH] Multiple changes
+
+
+diff --git a/src/main/java/org/bukkit/command/Command.java b/src/main/java/org/bukkit/command/Command.java
+index b791358f90fe92bc2264d9a26492245763813af3..d830e5d4a65869d52d2516041eee4ed5f7d1c653 100644
+--- a/src/main/java/org/bukkit/command/Command.java
++++ b/src/main/java/org/bukkit/command/Command.java
+@@ -23,6 +23,7 @@ import org.jetbrains.annotations.Nullable;
+  * Represents a Command, which executes various tasks upon user input
+  */
+ public abstract class Command {
++
+     private String name;
+     private String nextLabel;
+     private String label;
+@@ -47,7 +48,7 @@ public abstract class Command {
+         this.description = (description == null) ? "" : description;
+         this.usageMessage = (usageMessage == null) ? "/" + name : usageMessage;
+         this.aliases = aliases;
+-        this.activeAliases = new ArrayList<String>(aliases);
++        this.activeAliases = new ArrayList<>(aliases);
+     }
+ 
+     /**
+@@ -107,7 +108,7 @@ public abstract class Command {
+ 
+         Player senderPlayer = sender instanceof Player ? (Player) sender : null;
+ 
+-        ArrayList<String> matchedPlayers = new ArrayList<String>();
++        ArrayList<String> matchedPlayers = new ArrayList<>();
+         for (Player player : sender.getServer().getOnlinePlayers()) {
+             String name = player.getName();
+             if ((senderPlayer == null || senderPlayer.canSee(player)) && StringUtil.startsWithIgnoreCase(name, lastWord)) {
+diff --git a/src/main/java/org/bukkit/command/PluginCommandYamlParser.java b/src/main/java/org/bukkit/command/PluginCommandYamlParser.java
+index ef870b864c1e36032b54b31f3f85707edc06d764..5c2eb532607f4886d9a3e121ba8b7b0696da5463 100644
+--- a/src/main/java/org/bukkit/command/PluginCommandYamlParser.java
++++ b/src/main/java/org/bukkit/command/PluginCommandYamlParser.java
+@@ -46,14 +46,14 @@ public class PluginCommandYamlParser {
+                 if (aliases instanceof List) {
+                     for (Object o : (List<?>) aliases) {
+                         if (o.toString().contains(":")) {
+-                            Bukkit.getServer().getLogger().severe("Could not load alias " + o.toString() + " for plugin " + plugin.getName() + ": Illegal Characters");
++                            Bukkit.getServer().getLogger().severe("Could not load alias " + o + " for plugin " + plugin.getName() + ": Illegal Characters");
+                             continue;
+                         }
+                         aliasList.add(o.toString());
+                     }
+                 } else {
+                     if (aliases.toString().contains(":")) {
+-                        Bukkit.getServer().getLogger().severe("Could not load alias " + aliases.toString() + " for plugin " + plugin.getName() + ": Illegal Characters");
++                        Bukkit.getServer().getLogger().severe("Could not load alias " + aliases + " for plugin " + plugin.getName() + ": Illegal Characters");
+                     } else {
+                         aliasList.add(aliases.toString());
+                     }

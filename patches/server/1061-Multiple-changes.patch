@@ -1,0 +1,166 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Destitution <43219594+Destitution-SC@users.noreply.github.com>
+Date: Mon, 15 Apr 2024 23:04:25 +0200
+Subject: [PATCH] Multiple changes
+
+
+diff --git a/src/main/java/net/minecraft/commands/Commands.java b/src/main/java/net/minecraft/commands/Commands.java
+index b7f338e982d0dcab99137ab6dc200b82ac6b7cba..3c88662b1f3c12b0a688c466c35522238ed395b9 100644
+--- a/src/main/java/net/minecraft/commands/Commands.java
++++ b/src/main/java/net/minecraft/commands/Commands.java
+@@ -37,7 +37,6 @@ import net.minecraft.gametest.framework.TestCommand;
+ import net.minecraft.network.chat.ClickEvent;
+ import net.minecraft.network.chat.CommonComponents;
+ import net.minecraft.network.chat.Component;
+-import net.minecraft.network.chat.ComponentUtils;
+ import net.minecraft.network.chat.HoverEvent;
+ import net.minecraft.network.chat.MutableComponent;
+ import net.minecraft.network.protocol.game.ClientboundCommandsPacket;
+@@ -77,7 +76,6 @@ import net.minecraft.server.commands.ItemCommands;
+ import net.minecraft.server.commands.JfrCommand;
+ import net.minecraft.server.commands.KickCommand;
+ import net.minecraft.server.commands.KillCommand;
+-import net.minecraft.server.commands.ListPlayersCommand;
+ import net.minecraft.server.commands.LocateCommand;
+ import net.minecraft.server.commands.LootCommand;
+ import net.minecraft.server.commands.MsgCommand;
+@@ -99,7 +97,6 @@ import net.minecraft.server.commands.RideCommand;
+ import net.minecraft.server.commands.SaveAllCommand;
+ import net.minecraft.server.commands.SaveOffCommand;
+ import net.minecraft.server.commands.SaveOnCommand;
+-import net.minecraft.server.commands.SayCommand;
+ import net.minecraft.server.commands.ScheduleCommand;
+ import net.minecraft.server.commands.ScoreboardCommand;
+ import net.minecraft.server.commands.SeedCommand;
+@@ -183,7 +180,6 @@ public class Commands {
+         ItemCommands.register(this.dispatcher, commandRegistryAccess);
+         KickCommand.register(this.dispatcher);
+         KillCommand.register(this.dispatcher);
+-        ListPlayersCommand.register(this.dispatcher);
+         LocateCommand.register(this.dispatcher, commandRegistryAccess);
+         LootCommand.register(this.dispatcher, commandRegistryAccess);
+         MsgCommand.register(this.dispatcher);
+@@ -195,7 +191,6 @@ public class Commands {
+         RecipeCommand.register(this.dispatcher);
+         ReturnCommand.register(this.dispatcher);
+         RideCommand.register(this.dispatcher);
+-        SayCommand.register(this.dispatcher);
+         ScheduleCommand.register(this.dispatcher);
+         ScoreboardCommand.register(this.dispatcher);
+         SeedCommand.register(this.dispatcher, environment != Commands.CommandSelection.INTEGRATED);
+diff --git a/src/main/java/net/minecraft/server/commands/ListPlayersCommand.java b/src/main/java/net/minecraft/server/commands/ListPlayersCommand.java
+deleted file mode 100644
+index 73180c617945610e11b777733655f9e2c4c1dd0c..0000000000000000000000000000000000000000
+--- a/src/main/java/net/minecraft/server/commands/ListPlayersCommand.java
++++ /dev/null
+@@ -1,53 +0,0 @@
+-package net.minecraft.server.commands;
+-
+-import com.mojang.brigadier.CommandDispatcher;
+-import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+-import java.util.List;
+-import java.util.function.Function;
+-import net.minecraft.commands.CommandSourceStack;
+-import net.minecraft.network.chat.Component;
+-import net.minecraft.network.chat.ComponentUtils;
+-import net.minecraft.server.level.ServerPlayer;
+-import net.minecraft.server.players.PlayerList;
+-import net.minecraft.world.entity.player.Player;
+-
+-public class ListPlayersCommand {
+-
+-    public ListPlayersCommand() {}
+-
+-    public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
+-        dispatcher.register((LiteralArgumentBuilder) ((LiteralArgumentBuilder) net.minecraft.commands.Commands.literal("list").executes((commandcontext) -> {
+-            return ListPlayersCommand.listPlayers((CommandSourceStack) commandcontext.getSource());
+-        })).then(net.minecraft.commands.Commands.literal("uuids").executes((commandcontext) -> {
+-            return ListPlayersCommand.listPlayersWithUuids((CommandSourceStack) commandcontext.getSource());
+-        })));
+-    }
+-
+-    private static int listPlayers(CommandSourceStack source) {
+-        return ListPlayersCommand.format(source, Player::getDisplayName);
+-    }
+-
+-    private static int listPlayersWithUuids(CommandSourceStack source) {
+-        return ListPlayersCommand.format(source, (entityplayer) -> {
+-            return Component.translatable("commands.list.nameAndId", entityplayer.getName(), Component.translationArg(entityplayer.getGameProfile().getId()));
+-        });
+-    }
+-
+-    private static int format(CommandSourceStack source, Function<ServerPlayer, Component> nameProvider) {
+-        PlayerList playerlist = source.getServer().getPlayerList();
+-        // CraftBukkit start
+-        List<ServerPlayer> players = playerlist.getPlayers();
+-        if (source.getBukkitSender() instanceof org.bukkit.entity.Player) {
+-            org.bukkit.entity.Player sender = (org.bukkit.entity.Player) source.getBukkitSender();
+-            players = players.stream().filter((ep) -> sender.canSee(ep.getBukkitEntity())).collect(java.util.stream.Collectors.toList());
+-        }
+-        List<ServerPlayer> list = players;
+-        // CraftBukkit end
+-        Component ichatbasecomponent = ComponentUtils.formatList(list, nameProvider);
+-
+-        source.sendSuccess(() -> {
+-            return Component.translatable("commands.list.players", list.size(), playerlist.getMaxPlayers(), ichatbasecomponent);
+-        }, false);
+-        return list.size();
+-    }
+-}
+diff --git a/src/main/java/net/minecraft/server/commands/TimeCommand.java b/src/main/java/net/minecraft/server/commands/TimeCommand.java
+index 44fcd43a466fb47d31ab05e44bafbef3c4cae63f..ecc8f6b0c032fbad0c593fba4a88de4c66873401 100644
+--- a/src/main/java/net/minecraft/server/commands/TimeCommand.java
++++ b/src/main/java/net/minecraft/server/commands/TimeCommand.java
+@@ -18,26 +18,26 @@ public class TimeCommand {
+     public TimeCommand() {}
+ 
+     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
+-        dispatcher.register((LiteralArgumentBuilder) ((LiteralArgumentBuilder) ((LiteralArgumentBuilder) ((LiteralArgumentBuilder) net.minecraft.commands.Commands.literal("time").requires((commandlistenerwrapper) -> {
++        dispatcher.register((LiteralArgumentBuilder) ((LiteralArgumentBuilder) net.minecraft.commands.Commands.literal("time").requires((commandlistenerwrapper) -> {
+             return commandlistenerwrapper.hasPermission(2);
+-        })).then(((LiteralArgumentBuilder) ((LiteralArgumentBuilder) ((LiteralArgumentBuilder) ((LiteralArgumentBuilder) net.minecraft.commands.Commands.literal("set").then(net.minecraft.commands.Commands.literal("day").executes((commandcontext) -> {
+-            return TimeCommand.setTime((CommandSourceStack) commandcontext.getSource(), 1000);
++        })).then(((LiteralArgumentBuilder) net.minecraft.commands.Commands.literal("set").then(net.minecraft.commands.Commands.literal("day").executes((commandcontext) -> {
++            return TimeCommand.setTime(commandcontext.getSource(), 1000);
+         }))).then(net.minecraft.commands.Commands.literal("noon").executes((commandcontext) -> {
+-            return TimeCommand.setTime((CommandSourceStack) commandcontext.getSource(), 6000);
+-        }))).then(net.minecraft.commands.Commands.literal("night").executes((commandcontext) -> {
+-            return TimeCommand.setTime((CommandSourceStack) commandcontext.getSource(), 13000);
+-        }))).then(net.minecraft.commands.Commands.literal("midnight").executes((commandcontext) -> {
+-            return TimeCommand.setTime((CommandSourceStack) commandcontext.getSource(), 18000);
+-        }))).then(net.minecraft.commands.Commands.argument("time", TimeArgument.time()).executes((commandcontext) -> {
+-            return TimeCommand.setTime((CommandSourceStack) commandcontext.getSource(), IntegerArgumentType.getInteger(commandcontext, "time"));
+-        })))).then(net.minecraft.commands.Commands.literal("add").then(net.minecraft.commands.Commands.argument("time", TimeArgument.time()).executes((commandcontext) -> {
+-            return TimeCommand.addTime((CommandSourceStack) commandcontext.getSource(), IntegerArgumentType.getInteger(commandcontext, "time"));
+-        })))).then(((LiteralArgumentBuilder) ((LiteralArgumentBuilder) net.minecraft.commands.Commands.literal("query").then(net.minecraft.commands.Commands.literal("daytime").executes((commandcontext) -> {
+-            return TimeCommand.queryTime((CommandSourceStack) commandcontext.getSource(), TimeCommand.getDayTime(((CommandSourceStack) commandcontext.getSource()).getLevel()));
++            return TimeCommand.setTime(commandcontext.getSource(), 6000);
++        })).then(net.minecraft.commands.Commands.literal("night").executes((commandcontext) -> {
++            return TimeCommand.setTime(commandcontext.getSource(), 13000);
++        })).then(net.minecraft.commands.Commands.literal("midnight").executes((commandcontext) -> {
++            return TimeCommand.setTime(commandcontext.getSource(), 18000);
++        })).then(net.minecraft.commands.Commands.argument("time", TimeArgument.time()).executes((commandcontext) -> {
++            return TimeCommand.setTime(commandcontext.getSource(), IntegerArgumentType.getInteger(commandcontext, "time"));
++        }))).then(net.minecraft.commands.Commands.literal("add").then(net.minecraft.commands.Commands.argument("time", TimeArgument.time()).executes((commandcontext) -> {
++            return TimeCommand.addTime(commandcontext.getSource(), IntegerArgumentType.getInteger(commandcontext, "time"));
++        }))).then(((LiteralArgumentBuilder) net.minecraft.commands.Commands.literal("query").then(net.minecraft.commands.Commands.literal("daytime").executes((commandcontext) -> {
++            return TimeCommand.queryTime(commandcontext.getSource(), TimeCommand.getDayTime(commandcontext.getSource().getLevel()));
+         }))).then(net.minecraft.commands.Commands.literal("gametime").executes((commandcontext) -> {
+-            return TimeCommand.queryTime((CommandSourceStack) commandcontext.getSource(), (int) (((CommandSourceStack) commandcontext.getSource()).getLevel().getGameTime() % 2147483647L));
+-        }))).then(net.minecraft.commands.Commands.literal("day").executes((commandcontext) -> {
+-            return TimeCommand.queryTime((CommandSourceStack) commandcontext.getSource(), (int) (((CommandSourceStack) commandcontext.getSource()).getLevel().getDayTime() / 24000L % 2147483647L));
++            return TimeCommand.queryTime(commandcontext.getSource(), (int) (commandcontext.getSource().getLevel().getGameTime() % 2147483647L));
++        })).then(net.minecraft.commands.Commands.literal("day").executes((commandcontext) -> {
++            return TimeCommand.queryTime(commandcontext.getSource(), (int) (commandcontext.getSource().getLevel().getDayTime() / 24000L % 2147483647L));
+         }))));
+     }
+ 
+@@ -62,7 +62,7 @@ public class TimeCommand {
+             TimeSkipEvent event = new TimeSkipEvent(worldserver.getWorld(), TimeSkipEvent.SkipReason.COMMAND, time - worldserver.getDayTime());
+             Bukkit.getPluginManager().callEvent(event);
+             if (!event.isCancelled()) {
+-                worldserver.setDayTime((long) worldserver.getDayTime() + event.getSkipAmount());
++                worldserver.setDayTime(worldserver.getDayTime() + event.getSkipAmount());
+             }
+             // CraftBukkit end
+         }
