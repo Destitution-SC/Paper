@@ -1,0 +1,18 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Destitution <43219594+Destitution-SC@users.noreply.github.com>
+Date: Mon, 15 Apr 2024 23:11:03 +0200
+Subject: [PATCH] Removal of serveral commands
+
+
+diff --git a/src/main/java/net/minecraft/commands/Commands.java b/src/main/java/net/minecraft/commands/Commands.java
+index 3c88662b1f3c12b0a688c466c35522238ed395b9..1edc4b74611f150733ecbd084cbcb6563aa490f5 100644
+--- a/src/main/java/net/minecraft/commands/Commands.java
++++ b/src/main/java/net/minecraft/commands/Commands.java
+@@ -157,7 +157,6 @@ public class Commands {
+         AttributeCommand.register(this.dispatcher, commandRegistryAccess);
+         ExecuteCommand.register(this.dispatcher, commandRegistryAccess);
+         BossBarCommands.register(this.dispatcher);
+-        ClearInventoryCommands.register(this.dispatcher, commandRegistryAccess);
+         CloneCommands.register(this.dispatcher, commandRegistryAccess);
+         DamageCommand.register(this.dispatcher, commandRegistryAccess);
+         DataCommands.register(this.dispatcher);

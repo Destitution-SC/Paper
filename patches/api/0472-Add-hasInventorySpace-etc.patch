@@ -1,0 +1,46 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Destitution <43219594+Destitution-SC@users.noreply.github.com>
+Date: Tue, 16 Apr 2024 17:36:12 +0200
+Subject: [PATCH] Add hasInventorySpace(); etc...
+
+
+diff --git a/src/main/java/org/bukkit/block/DoubleChest.java b/src/main/java/org/bukkit/block/DoubleChest.java
+index a39d2f1acbbd84ae0e2cf29f85594e09e55e9355..2642326aecdf7624750a23684efb695f401eb13f 100644
+--- a/src/main/java/org/bukkit/block/DoubleChest.java
++++ b/src/main/java/org/bukkit/block/DoubleChest.java
+@@ -24,6 +24,11 @@ public class DoubleChest implements InventoryHolder {
+         return inventory;
+     }
+ 
++    @Override
++    public boolean hasInventorySpace() {
++        return this.inventory.firstEmpty() != -1;
++    }
++
+     @Nullable
+     public InventoryHolder getLeftSide() {
+         return inventory.getLeftSide().getHolder();
+diff --git a/src/main/java/org/bukkit/inventory/InventoryHolder.java b/src/main/java/org/bukkit/inventory/InventoryHolder.java
+index c7b17eabf07b829a02afe7c1f27a5127b6bfea70..19e7a95f736cd78108d3b926070adde2e2de7faf 100644
+--- a/src/main/java/org/bukkit/inventory/InventoryHolder.java
++++ b/src/main/java/org/bukkit/inventory/InventoryHolder.java
+@@ -11,4 +11,6 @@ public interface InventoryHolder {
+      */
+     @NotNull
+     public Inventory getInventory();
++
++    boolean hasInventorySpace();
+ }
+diff --git a/src/main/java/org/bukkit/permissions/PermissibleBase.java b/src/main/java/org/bukkit/permissions/PermissibleBase.java
+index cd3296fea01648592d2af89b3d80135acb6d0958..bf6c7b433edd0a7ceb8cd6a7967cf654cf08ef75 100644
+--- a/src/main/java/org/bukkit/permissions/PermissibleBase.java
++++ b/src/main/java/org/bukkit/permissions/PermissibleBase.java
+@@ -251,7 +251,7 @@ public class PermissibleBase implements Permissible {
+     @Override
+     @NotNull
+     public synchronized Set<PermissionAttachmentInfo> getEffectivePermissions() { // Paper - synchronized
+-        return new HashSet<PermissionAttachmentInfo>(permissions.values());
++        return new HashSet<>(permissions.values());
+     }
+ 
+     private static class RemoveAttachmentRunnable implements Runnable {

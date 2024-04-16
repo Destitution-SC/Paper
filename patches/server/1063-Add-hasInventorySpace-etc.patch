@@ -1,0 +1,597 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Destitution <43219594+Destitution-SC@users.noreply.github.com>
+Date: Tue, 16 Apr 2024 17:36:12 +0200
+Subject: [PATCH] Add hasInventorySpace(); etc...
+
+
+diff --git a/src/main/java/net/minecraft/commands/Commands.java b/src/main/java/net/minecraft/commands/Commands.java
+index 1edc4b74611f150733ecbd084cbcb6563aa490f5..df5f0907e38c7705289bb30e7d2baf9184c9c924 100644
+--- a/src/main/java/net/minecraft/commands/Commands.java
++++ b/src/main/java/net/minecraft/commands/Commands.java
+@@ -48,9 +48,7 @@ import net.minecraft.server.commands.BanIpCommands;
+ import net.minecraft.server.commands.BanListCommands;
+ import net.minecraft.server.commands.BanPlayerCommands;
+ import net.minecraft.server.commands.BossBarCommands;
+-import net.minecraft.server.commands.ClearInventoryCommands;
+ import net.minecraft.server.commands.CloneCommands;
+-import net.minecraft.server.commands.DamageCommand;
+ import net.minecraft.server.commands.DataPackCommand;
+ import net.minecraft.server.commands.DeOpCommands;
+ import net.minecraft.server.commands.DebugCommand;
+@@ -78,7 +76,6 @@ import net.minecraft.server.commands.KickCommand;
+ import net.minecraft.server.commands.KillCommand;
+ import net.minecraft.server.commands.LocateCommand;
+ import net.minecraft.server.commands.LootCommand;
+-import net.minecraft.server.commands.MsgCommand;
+ import net.minecraft.server.commands.OpCommand;
+ import net.minecraft.server.commands.PardonCommand;
+ import net.minecraft.server.commands.PardonIpCommand;
+@@ -121,7 +118,6 @@ import net.minecraft.server.commands.TimeCommand;
+ import net.minecraft.server.commands.TitleCommand;
+ import net.minecraft.server.commands.TriggerCommand;
+ import net.minecraft.server.commands.WardenSpawnTrackerCommand;
+-import net.minecraft.server.commands.WeatherCommand;
+ import net.minecraft.server.commands.WhitelistCommand;
+ import net.minecraft.server.commands.WorldBorderCommand;
+ import net.minecraft.server.commands.data.DataCommands;
+@@ -158,7 +154,6 @@ public class Commands {
+         ExecuteCommand.register(this.dispatcher, commandRegistryAccess);
+         BossBarCommands.register(this.dispatcher);
+         CloneCommands.register(this.dispatcher, commandRegistryAccess);
+-        DamageCommand.register(this.dispatcher, commandRegistryAccess);
+         DataCommands.register(this.dispatcher);
+         DataPackCommand.register(this.dispatcher);
+         DebugCommand.register(this.dispatcher);
+@@ -181,7 +176,6 @@ public class Commands {
+         KillCommand.register(this.dispatcher);
+         LocateCommand.register(this.dispatcher, commandRegistryAccess);
+         LootCommand.register(this.dispatcher, commandRegistryAccess);
+-        MsgCommand.register(this.dispatcher);
+         ParticleCommand.register(this.dispatcher, commandRegistryAccess);
+         PlaceCommand.register(this.dispatcher);
+         PlaySoundCommand.register(this.dispatcher);
+@@ -209,7 +203,6 @@ public class Commands {
+         TimeCommand.register(this.dispatcher);
+         TitleCommand.register(this.dispatcher);
+         TriggerCommand.register(this.dispatcher);
+-        WeatherCommand.register(this.dispatcher);
+         WorldBorderCommand.register(this.dispatcher);
+         if (JvmProfiler.INSTANCE.isAvailable()) {
+             JfrCommand.register(this.dispatcher);
+diff --git a/src/main/java/net/minecraft/server/players/PlayerList.java b/src/main/java/net/minecraft/server/players/PlayerList.java
+index 1e5f709115007ff19901c0a6c3cf884d9e4d3a6c..069abe6ead50c03ee61babe24b45fb3e4fd0712f 100644
+--- a/src/main/java/net/minecraft/server/players/PlayerList.java
++++ b/src/main/java/net/minecraft/server/players/PlayerList.java
+@@ -703,7 +703,7 @@ public abstract class PlayerList {
+         ServerPlayer entityplayer;
+ 
+         for (int i = 0; i < this.players.size(); ++i) {
+-            entityplayer = (ServerPlayer) this.players.get(i);
++            entityplayer = this.players.get(i);
+             if (entityplayer.getUUID().equals(uuid) || (io.papermc.paper.configuration.GlobalConfiguration.get().proxies.isProxyOnlineMode() && entityplayer.getGameProfile().getName().equalsIgnoreCase(gameprofile.getName()))) { // Paper - validate usernames
+                 list.add(entityplayer);
+             }
+@@ -733,7 +733,7 @@ public abstract class PlayerList {
+ 
+             ichatmutablecomponent = Component.translatable("multiplayer.disconnect.banned.reason", gameprofilebanentry.getReason());
+             if (gameprofilebanentry.getExpires() != null) {
+-                ichatmutablecomponent.append((Component) Component.translatable("multiplayer.disconnect.banned.expiration", PlayerList.BAN_DATE_FORMAT.format(gameprofilebanentry.getExpires())));
++                ichatmutablecomponent.append(Component.translatable("multiplayer.disconnect.banned.expiration", PlayerList.BAN_DATE_FORMAT.format(gameprofilebanentry.getExpires())));
+             }
+ 
+             // return chatmessage;
+diff --git a/src/main/java/org/bukkit/craftbukkit/block/CraftBarrel.java b/src/main/java/org/bukkit/craftbukkit/block/CraftBarrel.java
+index 7a09fde1a6fbd460548b43ff52301c51d8f5afbc..2a607e2f9dcdaf5c174f4ee4f4e6ed9710f56f33 100644
+--- a/src/main/java/org/bukkit/craftbukkit/block/CraftBarrel.java
++++ b/src/main/java/org/bukkit/craftbukkit/block/CraftBarrel.java
+@@ -33,6 +33,11 @@ public class CraftBarrel extends CraftLootable<BarrelBlockEntity> implements Bar
+         return new CraftInventory(this.getTileEntity());
+     }
+ 
++    @Override
++    public boolean hasInventorySpace() {
++        return this.getInventory().firstEmpty() != -1;
++    }
++
+     @Override
+     public void open() {
+         this.requirePlaced();
+diff --git a/src/main/java/org/bukkit/craftbukkit/block/CraftBlastFurnace.java b/src/main/java/org/bukkit/craftbukkit/block/CraftBlastFurnace.java
+index 2430a6b7dd7a14d8f114457ab9d1b6d0a1348dfb..b449fdbb86aa09903693e662dc3863ead0bbc90e 100644
+--- a/src/main/java/org/bukkit/craftbukkit/block/CraftBlastFurnace.java
++++ b/src/main/java/org/bukkit/craftbukkit/block/CraftBlastFurnace.java
+@@ -18,4 +18,9 @@ public class CraftBlastFurnace extends CraftFurnace<BlastFurnaceBlockEntity> imp
+     public CraftBlastFurnace copy() {
+         return new CraftBlastFurnace(this);
+     }
++
++    @Override
++    public boolean hasInventorySpace() {
++        return this.getInventory().firstEmpty() != -1;
++    }
+ }
+diff --git a/src/main/java/org/bukkit/craftbukkit/block/CraftBrewingStand.java b/src/main/java/org/bukkit/craftbukkit/block/CraftBrewingStand.java
+index 3b3baa68a26b195d7ea05a92c36affb84bc9ff17..981d167abf4959792475150e5164499d8fe8462e 100644
+--- a/src/main/java/org/bukkit/craftbukkit/block/CraftBrewingStand.java
++++ b/src/main/java/org/bukkit/craftbukkit/block/CraftBrewingStand.java
+@@ -30,6 +30,11 @@ public class CraftBrewingStand extends CraftContainer<BrewingStandBlockEntity> i
+         return new CraftInventoryBrewer(this.getTileEntity());
+     }
+ 
++    @Override
++    public boolean hasInventorySpace() {
++        return this.getInventory().firstEmpty() != -1;
++    }
++
+     @Override
+     public int getBrewingTime() {
+         return this.getSnapshot().brewTime;
+diff --git a/src/main/java/org/bukkit/craftbukkit/block/CraftChest.java b/src/main/java/org/bukkit/craftbukkit/block/CraftChest.java
+index b5d9e750965b21c27ec4aa12b0997176adbad527..812b770ecce961fc651a3b779be1081f87a7fc0f 100644
+--- a/src/main/java/org/bukkit/craftbukkit/block/CraftChest.java
++++ b/src/main/java/org/bukkit/craftbukkit/block/CraftChest.java
+@@ -57,6 +57,11 @@ public class CraftChest extends CraftLootable<ChestBlockEntity> implements Chest
+         return inventory;
+     }
+ 
++    @Override
++    public boolean hasInventorySpace() {
++        return this.getInventory().firstEmpty() != -1;
++    }
++
+     @Override
+     public void open() {
+         this.requirePlaced();
+diff --git a/src/main/java/org/bukkit/craftbukkit/block/CraftChiseledBookshelf.java b/src/main/java/org/bukkit/craftbukkit/block/CraftChiseledBookshelf.java
+index 60684adc59f2537d68a7b37da309649d2f8d054e..7f24b41b203d52b94c17c54f3689360578b03029 100644
+--- a/src/main/java/org/bukkit/craftbukkit/block/CraftChiseledBookshelf.java
++++ b/src/main/java/org/bukkit/craftbukkit/block/CraftChiseledBookshelf.java
+@@ -45,6 +45,11 @@ public class CraftChiseledBookshelf extends CraftBlockEntityState<ChiseledBookSh
+         return new CraftInventoryChiseledBookshelf(this.getTileEntity());
+     }
+ 
++    @Override
++    public boolean hasInventorySpace() {
++        return this.getInventory().firstEmpty() != -1;
++    }
++
+     @Override
+     public int getSlot(Vector clickVector) {
+         BlockFace facing = ((Directional) this.getBlockData()).getFacing();
+diff --git a/src/main/java/org/bukkit/craftbukkit/block/CraftCrafter.java b/src/main/java/org/bukkit/craftbukkit/block/CraftCrafter.java
+index c4ee90e268fbeb997484874552e0674563b0dbe1..e04760d6f064386ce509c00329bee3cfb70f3a1a 100644
+--- a/src/main/java/org/bukkit/craftbukkit/block/CraftCrafter.java
++++ b/src/main/java/org/bukkit/craftbukkit/block/CraftCrafter.java
+@@ -31,6 +31,11 @@ public class CraftCrafter extends CraftLootable<CrafterBlockEntity> implements C
+         return new CraftInventory(this.getTileEntity());
+     }
+ 
++    @Override
++    public boolean hasInventorySpace() {
++        return this.getInventory().firstEmpty() != -1;
++    }
++
+     @Override
+     public CraftCrafter copy() {
+         return new CraftCrafter(this);
+diff --git a/src/main/java/org/bukkit/craftbukkit/block/CraftDecoratedPot.java b/src/main/java/org/bukkit/craftbukkit/block/CraftDecoratedPot.java
+index e2fe5d8d7d8c00ed5d21cfe409933cdde8932e97..8bcd8c0f13de8a0d1064da6e1770c398bd794f9a 100644
+--- a/src/main/java/org/bukkit/craftbukkit/block/CraftDecoratedPot.java
++++ b/src/main/java/org/bukkit/craftbukkit/block/CraftDecoratedPot.java
+@@ -40,6 +40,11 @@ public class CraftDecoratedPot extends CraftBlockEntityState<DecoratedPotBlockEn
+         return new CraftInventoryDecoratedPot(this.getTileEntity());
+     }
+ 
++    @Override
++    public boolean hasInventorySpace() {
++        return this.getInventory().firstEmpty() != -1;
++    }
++
+     // Paper start - expose loot table
+     @Override
+     public void setLootTable(final org.bukkit.loot.LootTable table) {
+diff --git a/src/main/java/org/bukkit/craftbukkit/block/CraftDispenser.java b/src/main/java/org/bukkit/craftbukkit/block/CraftDispenser.java
+index 26eb048044b36ce57458c29491f0f74b20bea227..02821de2637de80360aaceefbbd8437ba6a1fe93 100644
+--- a/src/main/java/org/bukkit/craftbukkit/block/CraftDispenser.java
++++ b/src/main/java/org/bukkit/craftbukkit/block/CraftDispenser.java
+@@ -37,6 +37,11 @@ public class CraftDispenser extends CraftLootable<DispenserBlockEntity> implemen
+         return new CraftInventory(this.getTileEntity());
+     }
+ 
++    @Override
++    public boolean hasInventorySpace() {
++        return this.getInventory().firstEmpty() != -1;
++    }
++
+     @Override
+     public BlockProjectileSource getBlockProjectileSource() {
+         Block block = this.getBlock();
+diff --git a/src/main/java/org/bukkit/craftbukkit/block/CraftDropper.java b/src/main/java/org/bukkit/craftbukkit/block/CraftDropper.java
+index 75fff66df02ca9910726c4c691c522545ad2b62e..2a49215d6c2de97b7fe41426264b964e953718f0 100644
+--- a/src/main/java/org/bukkit/craftbukkit/block/CraftDropper.java
++++ b/src/main/java/org/bukkit/craftbukkit/block/CraftDropper.java
+@@ -35,6 +35,11 @@ public class CraftDropper extends CraftLootable<DropperBlockEntity> implements D
+         return new CraftInventory(this.getTileEntity());
+     }
+ 
++    @Override
++    public boolean hasInventorySpace() {
++        return this.getInventory().firstEmpty() != -1;
++    }
++
+     @Override
+     public void drop() {
+         this.ensureNoWorldGeneration();
+diff --git a/src/main/java/org/bukkit/craftbukkit/block/CraftFurnaceFurnace.java b/src/main/java/org/bukkit/craftbukkit/block/CraftFurnaceFurnace.java
+index 36632b2437638d67b43ccc2876c730a7a59a4c28..9c21e04d03e0796ef57c5932448e28178bbd041d 100644
+--- a/src/main/java/org/bukkit/craftbukkit/block/CraftFurnaceFurnace.java
++++ b/src/main/java/org/bukkit/craftbukkit/block/CraftFurnaceFurnace.java
+@@ -17,4 +17,9 @@ public class CraftFurnaceFurnace extends CraftFurnace<FurnaceBlockEntity> {
+     public CraftFurnaceFurnace copy() {
+         return new CraftFurnaceFurnace(this);
+     }
++
++    @Override
++    public boolean hasInventorySpace() {
++        return this.getInventory().firstEmpty() != -1;
++    }
+ }
+diff --git a/src/main/java/org/bukkit/craftbukkit/block/CraftHopper.java b/src/main/java/org/bukkit/craftbukkit/block/CraftHopper.java
+index af5f27fb5ebad1e05da2b7d1a0710a2ef9c6ebbe..79b2998a18f59844343386e22cdca6f9cc64437b 100644
+--- a/src/main/java/org/bukkit/craftbukkit/block/CraftHopper.java
++++ b/src/main/java/org/bukkit/craftbukkit/block/CraftHopper.java
+@@ -30,6 +30,11 @@ public class CraftHopper extends CraftLootable<HopperBlockEntity> implements Hop
+         return new CraftInventory(this.getTileEntity());
+     }
+ 
++    @Override
++    public boolean hasInventorySpace() {
++        return this.getInventory().firstEmpty() != -1;
++    }
++
+     @Override
+     public CraftHopper copy() {
+         return new CraftHopper(this);
+diff --git a/src/main/java/org/bukkit/craftbukkit/block/CraftJukebox.java b/src/main/java/org/bukkit/craftbukkit/block/CraftJukebox.java
+index 1864dc52d895e81157ac42f9e7b895d527c27355..ae6f2585b819828f7b553cb0ae6b8970a2813790 100644
+--- a/src/main/java/org/bukkit/craftbukkit/block/CraftJukebox.java
++++ b/src/main/java/org/bukkit/craftbukkit/block/CraftJukebox.java
+@@ -38,6 +38,11 @@ public class CraftJukebox extends CraftBlockEntityState<JukeboxBlockEntity> impl
+         return new CraftInventoryJukebox(this.getTileEntity());
+     }
+ 
++    @Override
++    public boolean hasInventorySpace() {
++        return this.getInventory().firstEmpty() != -1;
++    }
++
+     @Override
+     public boolean update(boolean force, boolean applyPhysics) {
+         boolean result = super.update(force, applyPhysics);
+diff --git a/src/main/java/org/bukkit/craftbukkit/block/CraftLectern.java b/src/main/java/org/bukkit/craftbukkit/block/CraftLectern.java
+index 2ee853e9187c4dfce86c2b8e5f88f6307c18e8c9..1be3953ecbfeded724d37affc81319f8082c805c 100644
+--- a/src/main/java/org/bukkit/craftbukkit/block/CraftLectern.java
++++ b/src/main/java/org/bukkit/craftbukkit/block/CraftLectern.java
+@@ -42,6 +42,11 @@ public class CraftLectern extends CraftBlockEntityState<LecternBlockEntity> impl
+         return new CraftInventoryLectern(this.getTileEntity().bookAccess);
+     }
+ 
++    @Override
++    public boolean hasInventorySpace() {
++        return this.getInventory().firstEmpty() != -1;
++    }
++
+     @Override
+     public boolean update(boolean force, boolean applyPhysics) {
+         boolean result = super.update(force, applyPhysics);
+diff --git a/src/main/java/org/bukkit/craftbukkit/block/CraftShulkerBox.java b/src/main/java/org/bukkit/craftbukkit/block/CraftShulkerBox.java
+index 07c428e5b3673e4028fe303dde5f30040b5ec3d7..762505fea1b9904e32bac7c617987569ff44b054 100644
+--- a/src/main/java/org/bukkit/craftbukkit/block/CraftShulkerBox.java
++++ b/src/main/java/org/bukkit/craftbukkit/block/CraftShulkerBox.java
+@@ -34,6 +34,11 @@ public class CraftShulkerBox extends CraftLootable<ShulkerBoxBlockEntity> implem
+         return new CraftInventory(this.getTileEntity());
+     }
+ 
++    @Override
++    public boolean hasInventorySpace() {
++        return this.getInventory().firstEmpty() != -1;
++    }
++
+     @Override
+     public DyeColor getColor() {
+         net.minecraft.world.item.DyeColor color = ((ShulkerBoxBlock) CraftBlockType.bukkitToMinecraft(this.getType())).color;
+diff --git a/src/main/java/org/bukkit/craftbukkit/block/CraftSmoker.java b/src/main/java/org/bukkit/craftbukkit/block/CraftSmoker.java
+index 8f53a2c146d5c4fa292e286f6e5546c3e0831008..5e617af0bb77dfe1640b8ff80bfb426125db7530 100644
+--- a/src/main/java/org/bukkit/craftbukkit/block/CraftSmoker.java
++++ b/src/main/java/org/bukkit/craftbukkit/block/CraftSmoker.java
+@@ -18,4 +18,9 @@ public class CraftSmoker extends CraftFurnace<SmokerBlockEntity> implements Smok
+     public CraftSmoker copy() {
+         return new CraftSmoker(this);
+     }
++
++    @Override
++    public boolean hasInventorySpace() {
++        return this.getInventory().firstEmpty() != -1;
++    }
+ }
+diff --git a/src/main/java/org/bukkit/craftbukkit/entity/CraftAbstractVillager.java b/src/main/java/org/bukkit/craftbukkit/entity/CraftAbstractVillager.java
+index 34e4c763c7ec971885147ab2509281fad56e1ca6..9cc964019deba3a77908869599ecf1efffada343 100644
+--- a/src/main/java/org/bukkit/craftbukkit/entity/CraftAbstractVillager.java
++++ b/src/main/java/org/bukkit/craftbukkit/entity/CraftAbstractVillager.java
+@@ -32,6 +32,11 @@ public class CraftAbstractVillager extends CraftAgeable implements AbstractVilla
+         return new CraftInventory(this.getHandle().getInventory());
+     }
+ 
++    @Override
++    public boolean hasInventorySpace() {
++        return this.getInventory().firstEmpty() != -1;
++    }
++
+     private CraftMerchant getMerchant() {
+         return this.getHandle().getCraftMerchant();
+     }
+diff --git a/src/main/java/org/bukkit/craftbukkit/entity/CraftAllay.java b/src/main/java/org/bukkit/craftbukkit/entity/CraftAllay.java
+index c64918175ec08d20cde2bda9e0cac8b474385fe0..4320db3aa3e790c4d7f1272636efe76a6a9d0e6f 100644
+--- a/src/main/java/org/bukkit/craftbukkit/entity/CraftAllay.java
++++ b/src/main/java/org/bukkit/craftbukkit/entity/CraftAllay.java
+@@ -31,6 +31,11 @@ public class CraftAllay extends CraftCreature implements org.bukkit.entity.Allay
+         return new CraftInventory(this.getHandle().getInventory());
+     }
+ 
++    @Override
++    public boolean hasInventorySpace() {
++        return this.getInventory().firstEmpty() != -1;
++    }
++
+     @Override
+     public boolean canDuplicate() {
+         return this.getHandle().canDuplicate();
+diff --git a/src/main/java/org/bukkit/craftbukkit/entity/CraftCamel.java b/src/main/java/org/bukkit/craftbukkit/entity/CraftCamel.java
+index 80e571c977db5cdf43bfbfce035f37a3fa325c95..4aecf404eb44bc84f0c067ed55b3ed6238187cc3 100644
+--- a/src/main/java/org/bukkit/craftbukkit/entity/CraftCamel.java
++++ b/src/main/java/org/bukkit/craftbukkit/entity/CraftCamel.java
+@@ -49,4 +49,9 @@ public class CraftCamel extends CraftAbstractHorse implements Camel {
+             this.getHandle().standUp();
+         }
+     }
++
++    @Override
++    public boolean hasInventorySpace() {
++        return this.getInventory().firstEmpty() != -1;
++    }
+ }
+diff --git a/src/main/java/org/bukkit/craftbukkit/entity/CraftChestBoat.java b/src/main/java/org/bukkit/craftbukkit/entity/CraftChestBoat.java
+index f1844d697b91e61878ade5b922cf2a3a538365c7..25f33ab7d39adf646974599021762697b4f4789e 100644
+--- a/src/main/java/org/bukkit/craftbukkit/entity/CraftChestBoat.java
++++ b/src/main/java/org/bukkit/craftbukkit/entity/CraftChestBoat.java
+@@ -33,6 +33,11 @@ public class CraftChestBoat extends CraftBoat implements org.bukkit.entity.Chest
+         return this.inventory;
+     }
+ 
++    @Override
++    public boolean hasInventorySpace() {
++        return this.getInventory().firstEmpty() != -1;
++    }
++
+     @Override
+     public void setLootTable(LootTable table) {
+         this.setLootTable(table, this.getSeed());
+diff --git a/src/main/java/org/bukkit/craftbukkit/entity/CraftDonkey.java b/src/main/java/org/bukkit/craftbukkit/entity/CraftDonkey.java
+index 955a1c92a9e10ea5e4468afa9654f8c127656685..4a92f740c3a41832bd3d26d45471eb094a3718f5 100644
+--- a/src/main/java/org/bukkit/craftbukkit/entity/CraftDonkey.java
++++ b/src/main/java/org/bukkit/craftbukkit/entity/CraftDonkey.java
+@@ -19,4 +19,9 @@ public class CraftDonkey extends CraftChestedHorse implements Donkey {
+     public Variant getVariant() {
+         return Variant.DONKEY;
+     }
++
++    @Override
++    public boolean hasInventorySpace() {
++        return this.getInventory().firstEmpty() != -1;
++    }
+ }
+diff --git a/src/main/java/org/bukkit/craftbukkit/entity/CraftHorse.java b/src/main/java/org/bukkit/craftbukkit/entity/CraftHorse.java
+index 8746f80d08df5501b32958eb123aa7d814573ddf..de2e4fd1942ba343b475f32d83082b29a9944902 100644
+--- a/src/main/java/org/bukkit/craftbukkit/entity/CraftHorse.java
++++ b/src/main/java/org/bukkit/craftbukkit/entity/CraftHorse.java
+@@ -60,6 +60,11 @@ public class CraftHorse extends CraftAbstractHorse implements Horse {
+         return new CraftInventoryHorse(this.getHandle().inventory);
+     }
+ 
++    @Override
++    public boolean hasInventorySpace() {
++        return this.getInventory().firstEmpty() != -1;
++    }
++
+     @Override
+     public String toString() {
+         return "CraftHorse{variant=" + this.getVariant() + ", owner=" + this.getOwner() + '}';
+diff --git a/src/main/java/org/bukkit/craftbukkit/entity/CraftHumanEntity.java b/src/main/java/org/bukkit/craftbukkit/entity/CraftHumanEntity.java
+index 7984365c8290ac9e526a413b56e1c8c0841e330c..7c7ba90219b6bebd7175bdc6cb77d0a0bf5de68b 100644
+--- a/src/main/java/org/bukkit/craftbukkit/entity/CraftHumanEntity.java
++++ b/src/main/java/org/bukkit/craftbukkit/entity/CraftHumanEntity.java
+@@ -49,7 +49,6 @@ import org.bukkit.craftbukkit.inventory.CraftInventoryView;
+ import org.bukkit.craftbukkit.inventory.CraftItemStack;
+ import org.bukkit.craftbukkit.inventory.CraftItemType;
+ import org.bukkit.craftbukkit.inventory.CraftMerchantCustom;
+-import org.bukkit.craftbukkit.util.CraftChatMessage;
+ import org.bukkit.craftbukkit.util.CraftLocation;
+ import org.bukkit.craftbukkit.util.CraftNamespacedKey;
+ import org.bukkit.entity.Firework;
+@@ -70,6 +69,7 @@ import org.bukkit.permissions.PermissionAttachmentInfo;
+ import org.bukkit.plugin.Plugin;
+ 
+ public class CraftHumanEntity extends CraftLivingEntity implements HumanEntity {
++
+     private CraftInventoryPlayer inventory;
+     private final CraftInventory enderChest;
+     protected final PermissibleBase perm = new PermissibleBase(this);
+@@ -88,6 +88,14 @@ public class CraftHumanEntity extends CraftLivingEntity implements HumanEntity {
+         return this.inventory;
+     }
+ 
++    /**
++     * Checks if the player's inventory is full or not.
++     */
++    @Override
++    public boolean hasInventorySpace() {
++        return this.inventory.firstEmpty() != -1;
++    }
++
+     @Override
+     public EntityEquipment getEquipment() {
+         return this.inventory;
+diff --git a/src/main/java/org/bukkit/craftbukkit/entity/CraftLlama.java b/src/main/java/org/bukkit/craftbukkit/entity/CraftLlama.java
+index 0ad16ee7b33582d214dab41eeee378d52c8e38ed..1928941c79aace6756daa4b2adab9d3d49c4c2b7 100644
+--- a/src/main/java/org/bukkit/craftbukkit/entity/CraftLlama.java
++++ b/src/main/java/org/bukkit/craftbukkit/entity/CraftLlama.java
+@@ -36,6 +36,11 @@ public class CraftLlama extends CraftChestedHorse implements Llama, com.destroys
+         return new CraftInventoryLlama(this.getHandle().inventory);
+     }
+ 
++    @Override
++    public boolean hasInventorySpace() {
++        return this.getInventory().firstEmpty() != -1;
++    }
++
+     @Override
+     public int getStrength() {
+        return this.getHandle().getStrength();
+diff --git a/src/main/java/org/bukkit/craftbukkit/entity/CraftMinecartChest.java b/src/main/java/org/bukkit/craftbukkit/entity/CraftMinecartChest.java
+index b1a708de6790bbe336202b13ab862ced78de084f..66a0909c4a762d22da909ea09a1bfc40e66a9dee 100644
+--- a/src/main/java/org/bukkit/craftbukkit/entity/CraftMinecartChest.java
++++ b/src/main/java/org/bukkit/craftbukkit/entity/CraftMinecartChest.java
+@@ -20,6 +20,11 @@ public class CraftMinecartChest extends CraftMinecartContainer implements Storag
+         return this.inventory;
+     }
+ 
++    @Override
++    public boolean hasInventorySpace() {
++        return this.getInventory().firstEmpty() != -1;
++    }
++
+     @Override
+     public String toString() {
+         return "CraftMinecartChest{" + "inventory=" + this.inventory + '}';
+diff --git a/src/main/java/org/bukkit/craftbukkit/entity/CraftMinecartHopper.java b/src/main/java/org/bukkit/craftbukkit/entity/CraftMinecartHopper.java
+index 3a3563a1bdbc0d84d973b3a04b50b78b4bc3d379..378bd3332ea31b98a7dc04f4d69e3902299064ef 100644
+--- a/src/main/java/org/bukkit/craftbukkit/entity/CraftMinecartHopper.java
++++ b/src/main/java/org/bukkit/craftbukkit/entity/CraftMinecartHopper.java
+@@ -24,6 +24,11 @@ public final class CraftMinecartHopper extends CraftMinecartContainer implements
+         return this.inventory;
+     }
+ 
++    @Override
++    public boolean hasInventorySpace() {
++        return this.getInventory().firstEmpty() != -1;
++    }
++
+     @Override
+     public boolean isEnabled() {
+         return ((MinecartHopper) this.getHandle()).isEnabled();
+diff --git a/src/main/java/org/bukkit/craftbukkit/entity/CraftMule.java b/src/main/java/org/bukkit/craftbukkit/entity/CraftMule.java
+index 97820a5da3b2e304abd3a73c371ebc0489db936b..59718e039e8f2e306896eb01a5ac057f5ccd3c9b 100644
+--- a/src/main/java/org/bukkit/craftbukkit/entity/CraftMule.java
++++ b/src/main/java/org/bukkit/craftbukkit/entity/CraftMule.java
+@@ -19,4 +19,9 @@ public class CraftMule extends CraftChestedHorse implements Mule {
+     public Variant getVariant() {
+         return Variant.MULE;
+     }
++
++    @Override
++    public boolean hasInventorySpace() {
++        return this.getInventory().firstEmpty() != -1;
++    }
+ }
+diff --git a/src/main/java/org/bukkit/craftbukkit/entity/CraftPiglin.java b/src/main/java/org/bukkit/craftbukkit/entity/CraftPiglin.java
+index 5124a383b60b2c8de89fa992547d0c61db760c21..8bbd28869b75ded84741153667012d356bf29cbd 100644
+--- a/src/main/java/org/bukkit/craftbukkit/entity/CraftPiglin.java
++++ b/src/main/java/org/bukkit/craftbukkit/entity/CraftPiglin.java
+@@ -75,6 +75,11 @@ public class CraftPiglin extends CraftPiglinAbstract implements Piglin, com.dest
+         return new CraftInventory(this.getHandle().inventory);
+     }
+ 
++    @Override
++    public boolean hasInventorySpace() {
++        return this.getInventory().firstEmpty() != -1;
++    }
++
+     @Override
+     public net.minecraft.world.entity.monster.piglin.Piglin getHandle() {
+         return (net.minecraft.world.entity.monster.piglin.Piglin) super.getHandle();
+diff --git a/src/main/java/org/bukkit/craftbukkit/entity/CraftPillager.java b/src/main/java/org/bukkit/craftbukkit/entity/CraftPillager.java
+index 2638c341bc02f201f7ab17fdebcdbdf3a7ec05bf..1c1b59e13dc652058cf2a5c8cb80a7225b6963ba 100644
+--- a/src/main/java/org/bukkit/craftbukkit/entity/CraftPillager.java
++++ b/src/main/java/org/bukkit/craftbukkit/entity/CraftPillager.java
+@@ -25,4 +25,9 @@ public class CraftPillager extends CraftIllager implements Pillager, com.destroy
+     public Inventory getInventory() {
+         return new CraftInventory(this.getHandle().inventory);
+     }
++
++    @Override
++    public boolean hasInventorySpace() {
++        return this.getInventory().firstEmpty() != -1;
++    }
+ }
+diff --git a/src/main/java/org/bukkit/craftbukkit/entity/CraftPlayer.java b/src/main/java/org/bukkit/craftbukkit/entity/CraftPlayer.java
+index c5c59ae20da50b7349194745cb5b4c43fc69b2b5..e6e10f72c1d35b1e83c31420cb2636740399b5de 100644
+--- a/src/main/java/org/bukkit/craftbukkit/entity/CraftPlayer.java
++++ b/src/main/java/org/bukkit/craftbukkit/entity/CraftPlayer.java
+@@ -2996,6 +2996,14 @@ public class CraftPlayer extends CraftHumanEntity implements Player {
+         this.getHandle().displayName = null;
+     }
+ 
++    /**
++     * Clears the player's chat.
++     */
++    public void clearChat(boolean notification) {
++        for(int i = 0; i < 100; i++) sendMessage(" ");
++        if(notification) sendMessage("&6You've cleared your chat.");
++    }
++
+     @Override
+     public void deleteMessage(net.kyori.adventure.chat.SignedMessage.Signature signature) {
+         if (getHandle().connection == null) return;
+diff --git a/src/main/java/org/bukkit/craftbukkit/entity/CraftSkeletonHorse.java b/src/main/java/org/bukkit/craftbukkit/entity/CraftSkeletonHorse.java
+index fbb47491dcc75f8247dee9f123f946f99ef1467f..7af2b6eb34adc1b430f9969661a5f34f831e8f5c 100644
+--- a/src/main/java/org/bukkit/craftbukkit/entity/CraftSkeletonHorse.java
++++ b/src/main/java/org/bukkit/craftbukkit/entity/CraftSkeletonHorse.java
+@@ -55,5 +55,10 @@ public class CraftSkeletonHorse extends CraftAbstractHorse implements SkeletonHo
+     public void setTrap(boolean trap) {
+         getHandle().setTrap(trap);
+     }
++
++    @Override
++    public boolean hasInventorySpace() {
++        return this.getInventory().firstEmpty() != -1;
++    }
+     // Paper end
+ }
+diff --git a/src/main/java/org/bukkit/craftbukkit/entity/CraftZombieHorse.java b/src/main/java/org/bukkit/craftbukkit/entity/CraftZombieHorse.java
+index 2c47ea42df327b0886358f4e209b8629d6ac859c..0ddf22bf15070737d9f98c068ca2f2f0bae2e5f7 100644
+--- a/src/main/java/org/bukkit/craftbukkit/entity/CraftZombieHorse.java
++++ b/src/main/java/org/bukkit/craftbukkit/entity/CraftZombieHorse.java
+@@ -19,4 +19,9 @@ public class CraftZombieHorse extends CraftAbstractHorse implements ZombieHorse
+     public Variant getVariant() {
+         return Variant.UNDEAD_HORSE;
+     }
++
++    @Override
++    public boolean hasInventorySpace() {
++        return this.getInventory().firstEmpty() != -1;
++    }
+ }
+diff --git a/src/main/java/org/bukkit/craftbukkit/inventory/CraftBlockInventoryHolder.java b/src/main/java/org/bukkit/craftbukkit/inventory/CraftBlockInventoryHolder.java
+index 7129eb5f5cea39992b4c690cb421004004a952ea..b19ae6e5a433d4205c2980adb4a82b01fd38138a 100644
+--- a/src/main/java/org/bukkit/craftbukkit/inventory/CraftBlockInventoryHolder.java
++++ b/src/main/java/org/bukkit/craftbukkit/inventory/CraftBlockInventoryHolder.java
+@@ -34,4 +34,9 @@ public class CraftBlockInventoryHolder implements BlockInventoryHolder {
+     public Inventory getInventory() {
+         return this.inventory;
+     }
++
++    @Override
++    public boolean hasInventorySpace() {
++        return this.getInventory().firstEmpty() != -1;
++    }
+ }
