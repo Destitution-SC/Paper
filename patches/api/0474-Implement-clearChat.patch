@@ -1,0 +1,27 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Destitution <43219594+Destitution-SC@users.noreply.github.com>
+Date: Tue, 16 Apr 2024 18:29:43 +0200
+Subject: [PATCH] Implement clearChat();
+
+
+diff --git a/src/main/java/org/bukkit/entity/Player.java b/src/main/java/org/bukkit/entity/Player.java
+index c6cb4f17469a8f2e60dd3e28d41402851ce5fb21..3fc0156c5f7a9ee10dde5c9ddc5ff28699aa8ff1 100644
+--- a/src/main/java/org/bukkit/entity/Player.java
++++ b/src/main/java/org/bukkit/entity/Player.java
+@@ -45,7 +45,6 @@ import org.bukkit.plugin.Plugin;
+ import org.bukkit.plugin.messaging.PluginMessageRecipient;
+ import org.bukkit.potion.PotionEffect;
+ import org.bukkit.potion.PotionEffectType;
+-import org.bukkit.profile.PlayerProfile;
+ import org.bukkit.scoreboard.Scoreboard;
+ import org.jetbrains.annotations.ApiStatus;
+ import org.jetbrains.annotations.NotNull;
+@@ -1460,6 +1459,8 @@ public interface Player extends HumanEntity, Conversable, OfflinePlayer, PluginM
+     @Deprecated
+     public void sendActionBar(@NotNull net.md_5.bungee.api.chat.BaseComponent... message);
+ 
++    public void clearChat(boolean notification);
++
+     /**
+      * Sends the component to the player
+      *

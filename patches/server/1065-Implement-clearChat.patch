@@ -1,0 +1,59 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Destitution <43219594+Destitution-SC@users.noreply.github.com>
+Date: Tue, 16 Apr 2024 18:29:43 +0200
+Subject: [PATCH] Implement clearChat();
+
+
+diff --git a/src/main/java/org/bukkit/craftbukkit/entity/CraftPlayer.java b/src/main/java/org/bukkit/craftbukkit/entity/CraftPlayer.java
+index e6e10f72c1d35b1e83c31420cb2636740399b5de..165d0bd850a92d01015a24db0d021584163f19fd 100644
+--- a/src/main/java/org/bukkit/craftbukkit/entity/CraftPlayer.java
++++ b/src/main/java/org/bukkit/craftbukkit/entity/CraftPlayer.java
+@@ -100,7 +100,6 @@ import net.minecraft.world.phys.Vec3;
+ import org.bukkit.BanEntry;
+ import org.bukkit.BanList;
+ import org.bukkit.Bukkit;
+-import org.bukkit.ChatColor;
+ import org.bukkit.DyeColor;
+ import org.bukkit.Effect;
+ import org.bukkit.GameMode;
+@@ -149,7 +148,6 @@ import org.bukkit.craftbukkit.map.CraftMapView;
+ import org.bukkit.craftbukkit.map.RenderData;
+ import org.bukkit.craftbukkit.potion.CraftPotionEffectType;
+ import org.bukkit.craftbukkit.potion.CraftPotionUtil;
+-import org.bukkit.craftbukkit.profile.CraftPlayerProfile;
+ import org.bukkit.craftbukkit.scoreboard.CraftScoreboard;
+ import org.bukkit.craftbukkit.util.CraftChatMessage;
+ import org.bukkit.craftbukkit.util.CraftLocation;
+@@ -162,7 +160,6 @@ import org.bukkit.event.player.PlayerExpCooldownChangeEvent;
+ import org.bukkit.event.player.PlayerHideEntityEvent;
+ import org.bukkit.event.player.PlayerRegisterChannelEvent;
+ import org.bukkit.event.player.PlayerShowEntityEvent;
+-import org.bukkit.event.player.PlayerSpawnChangeEvent;
+ import org.bukkit.event.player.PlayerTeleportEvent;
+ import org.bukkit.event.player.PlayerUnregisterChannelEvent;
+ import org.bukkit.inventory.EquipmentSlot;
+@@ -175,7 +172,6 @@ import org.bukkit.plugin.Plugin;
+ import org.bukkit.plugin.messaging.StandardMessenger;
+ import org.bukkit.potion.PotionEffect;
+ import org.bukkit.potion.PotionEffectType;
+-import org.bukkit.profile.PlayerProfile;
+ import org.bukkit.scoreboard.Scoreboard;
+ import org.jetbrains.annotations.NotNull;
+ 
+@@ -288,7 +284,7 @@ public class CraftPlayer extends CraftHumanEntity implements Player {
+ 
+     @Override
+     public void sendRawMessage(@NotNull String message) {
+-        this.sendRawMessage(null, ChatColor.translateAlternateColorCodes('&', message));
++        this.sendRawMessage(null, message);
+     }
+ 
+     @Override
+@@ -2999,6 +2995,7 @@ public class CraftPlayer extends CraftHumanEntity implements Player {
+     /**
+      * Clears the player's chat.
+      */
++    @Override
+     public void clearChat(boolean notification) {
+         for(int i = 0; i < 100; i++) sendMessage(" ");
+         if(notification) sendMessage("&6You've cleared your chat.");
