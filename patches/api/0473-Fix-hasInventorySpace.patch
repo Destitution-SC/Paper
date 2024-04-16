@@ -1,0 +1,46 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Destitution <43219594+Destitution-SC@users.noreply.github.com>
+Date: Tue, 16 Apr 2024 17:56:28 +0200
+Subject: [PATCH] Fix hasInventorySpace();
+
+
+diff --git a/src/main/java/org/bukkit/block/DoubleChest.java b/src/main/java/org/bukkit/block/DoubleChest.java
+index 2642326aecdf7624750a23684efb695f401eb13f..a39d2f1acbbd84ae0e2cf29f85594e09e55e9355 100644
+--- a/src/main/java/org/bukkit/block/DoubleChest.java
++++ b/src/main/java/org/bukkit/block/DoubleChest.java
+@@ -24,11 +24,6 @@ public class DoubleChest implements InventoryHolder {
+         return inventory;
+     }
+ 
+-    @Override
+-    public boolean hasInventorySpace() {
+-        return this.inventory.firstEmpty() != -1;
+-    }
+-
+     @Nullable
+     public InventoryHolder getLeftSide() {
+         return inventory.getLeftSide().getHolder();
+diff --git a/src/main/java/org/bukkit/inventory/Inventory.java b/src/main/java/org/bukkit/inventory/Inventory.java
+index 0d519813c12d98b28d62e6d01d7ec6e8c2dba3c3..d2562adfe2a9cb0c46f0d12782130420793b7b19 100644
+--- a/src/main/java/org/bukkit/inventory/Inventory.java
++++ b/src/main/java/org/bukkit/inventory/Inventory.java
+@@ -317,6 +317,8 @@ public interface Inventory extends Iterable<ItemStack> {
+      */
+     public int firstEmpty();
+ 
++    public boolean hasInventorySpace();
++
+     /**
+      * Check whether or not this inventory is empty. An inventory is considered
+      * to be empty if there are no ItemStacks in any slot of this inventory.
+diff --git a/src/main/java/org/bukkit/inventory/InventoryHolder.java b/src/main/java/org/bukkit/inventory/InventoryHolder.java
+index 19e7a95f736cd78108d3b926070adde2e2de7faf..c7b17eabf07b829a02afe7c1f27a5127b6bfea70 100644
+--- a/src/main/java/org/bukkit/inventory/InventoryHolder.java
++++ b/src/main/java/org/bukkit/inventory/InventoryHolder.java
+@@ -11,6 +11,4 @@ public interface InventoryHolder {
+      */
+     @NotNull
+     public Inventory getInventory();
+-
+-    boolean hasInventorySpace();
+ }
